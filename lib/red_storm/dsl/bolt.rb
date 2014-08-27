@@ -1,7 +1,7 @@
 require 'java'
 require 'red_storm/configurator'
 require 'red_storm/environment'
-+require 'red_storm/loggable'
+require 'red_storm/loggable'
 require 'pathname'
 
 java_import 'backtype.storm.tuple.Fields'
