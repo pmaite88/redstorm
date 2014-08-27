@@ -3,6 +3,5 @@
   <info organisation="redstorm" module="storm-deps"/>
   <dependencies>
     <dependency org="org.apache.storm" name="storm-core" rev="0.9.2-incubating" conf="default" transitive="true" />
-    <override org="org.slf4j" module="slf4j-log4j12" rev="1.6.3"/>
   </dependencies>
 </ivy-module>
