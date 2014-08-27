@@ -3,8 +3,9 @@ package redstorm.storm.jruby;
 import storm.trident.tuple.TridentTuple;
 import storm.trident.operation.TridentCollector;
 import java.util.Map;
-import storm.trident.operation.TridentOperationContext;
-import storm.trident.operation.Function;
+
+import storm.trident.operation.TridentMultiReducerContext;
+import storm.trident.operation.MultiReducer;
 
 import org.jruby.Ruby;
 import org.jruby.RubyObject;
@@ -19,7 +20,7 @@ public class JRubyTridentMultiReducer implements MultiReducer {
   private final String _bootstrap;
 
   // transient to avoid serialization
-  private transient IRubyObject _ruby_function;
+  private transient IRubyObject _ruby_reducer;
   private transient Ruby __ruby__;
 
   public JRubyTridentMultiReducer(final String baseClassPath, final String realClassName) {
@@ -28,39 +29,41 @@ public class JRubyTridentMultiReducer implements MultiReducer {
   }
 
   @Override
-  public void execute(final T state, final int streamIndex, final TridentTuple input, final TridentCollector collector) {
-    IRubyObject ruby_tuple = JavaUtil.convertJavaToRuby(__ruby__, tuple);
+  public void execute(final Object state, final int streamIndex, final TridentTuple input, final TridentCollector collector) {
+    IRubyObject ruby_state = JavaUtil.convertJavaToRuby(__ruby__, state);
+    IRubyObject ruby_index = JavaUtil.convertJavaToRuby(__ruby__, streamIndex);
+    IRubyObject ruby_tuple = JavaUtil.convertJavaToRuby(__ruby__, input);
     IRubyObject ruby_collector = JavaUtil.convertJavaToRuby(__ruby__, collector);
-    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_function, "execute", ruby_tuple, ruby_collector);
+    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_reducer, "execute", ruby_state, ruby_index, ruby_tuple, ruby_collector);
   }
 
   @Override
-  public void complete(final T state, final TridentCollector collector) {
-    IRubyObject ruby_tuple = JavaUtil.convertJavaToRuby(__ruby__, tuple);
+  public void complete(final Object state, final TridentCollector collector) {
+    IRubyObject ruby_state = JavaUtil.convertJavaToRuby(__ruby__, state);
     IRubyObject ruby_collector = JavaUtil.convertJavaToRuby(__ruby__, collector);
-    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_function, "complete", ruby_tuple, ruby_collector);
+    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_reducer, "complete", ruby_state, ruby_collector);
   }
 
   @Override
-  public T init(TridentCollector collector) {
-    IRubyObject ruby_tuple = JavaUtil.convertJavaToRuby(__ruby__, tuple);
-    IRubyObject ruby_result = Helpers.invoke(__ruby__.getCurrentContext(), _ruby_filter, 'init', ruby_tuple);
-    return (boolean)ruby_result.toJava(Boolean.class);
+  public Object init(TridentCollector collector) {
+    IRubyObject ruby_collector = JavaUtil.convertJavaToRuby(__ruby__, collector);
+    IRubyObject ruby_result = Helpers.invoke(__ruby__.getCurrentContext(), _ruby_reducer, "init", ruby_collector);
+    return (Object)ruby_result.toJava(Object.class);
   }
 
   @Override
   public void cleanup() {
-    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_function, "cleanup");
+    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_reducer, "cleanup");
   }
 
   @Override
-  public void prepare(final Map conf, final TridentOperationContext context) {
-    if(_ruby_function == null) {
-      _ruby_function = initialize_ruby_function();
+  public void prepare(final Map conf, final TridentMultiReducerContext context) {
+    if(_ruby_reducer == null) {
+      _ruby_reducer = initialize_ruby_function();
     }
     IRubyObject ruby_conf = JavaUtil.convertJavaToRuby(__ruby__, conf);
     IRubyObject ruby_context = JavaUtil.convertJavaToRuby(__ruby__, context);
-    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_function, "prepare", ruby_conf, ruby_context);
+    Helpers.invoke(__ruby__.getCurrentContext(), _ruby_reducer, "prepare", ruby_conf, ruby_context);
   }
 
   private IRubyObject initialize_ruby_function() {
